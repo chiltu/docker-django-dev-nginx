@@ -1,0 +1,68 @@
+version: '2'
+services:
+  db:
+    image: postgres:latest
+    environment:
+      - POSTGRES_USER=composeexampleuser
+      - POSTGRES_PASSWORD=composeexamplepass
+      - POSTGRES_DB=composeexample
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    #ports:
+    #  - "5432:5432"
+  redis:
+    image: redis:latest
+    volumes:
+      - redisdata:/data
+      - ./shared_logs/redis:/var/log/redis
+  rabbitmq:
+    image: rabbitmq:3
+    volumes:
+      - ./shared_logs/rabbitmq:/var/log/rabbitmq/
+  celery:
+    build:
+      context: .
+      dockerfile: Dockerfile-celery
+    command: celery -A composeexample worker -l info -B
+    environment:
+      - DJANGO_SETTINGS_MODULE=composeexample.settings.production
+    volumes:
+      - ./shared_logs/celery:/code/logs
+    depends_on:
+      - redis
+      - rabbitmq
+  web:
+    build: .
+    command: uwsgi --ini /etc/uwsgi/emperor.ini
+    environment:
+      - DJANGO_SETTINGS_MODULE=composeexample.settings.production
+    volumes:
+      - upstream:/socket
+      - ./shared_logs/uwsgi:/var/log/uwsgi
+      - ./shared_logs/uwsgi:/code/logs
+      - mediadata:/code/media
+      - staticdata:/code/static
+    depends_on:
+      - db
+      - redis
+      - rabbitmq
+  nginx:
+    build:
+      context: .
+      dockerfile: Dockerfile-nginx
+    depends_on:
+      - web
+    volumes:
+      - upstream:/socket
+      - ./shared_logs/nginx:/var/log/nginx
+      - staticdata:/webconfig/static
+      - mediadata:/webconfig/media
+    ports:
+      - "80:80"
+
+volumes:
+  upstream: {}
+  pgdata: {}
+  redisdata: {}
+  staticdata: {}
+  mediadata: {}

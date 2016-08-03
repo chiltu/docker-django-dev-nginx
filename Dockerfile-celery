@@ -1,0 +1,12 @@
+FROM	python:2.7
+ENV     PYTHONUNBUFFERED 1
+RUN	groupadd celery \
+		&& useradd --create-home --home-dir /home/celery -g celery celery \
+		&& install -d -o celery -g celery /home/celery/code \
+		&& install -d -o celery -g celery /home/celery/code/logs
+ADD	./requirements.txt /code/requirements.txt
+RUN	pip install -r /code/requirements.txt
+COPY	. /home/celery/code
+WORKDIR	/home/celery/code
+USER	celery
+CMD	["celery", "worker", "-l", "info"]

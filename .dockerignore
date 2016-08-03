@@ -1,0 +1,7 @@
+.dockerignore
+Dockerfile
+Dockerfile-nginx
+Dockerfile-celery
+Dockerfile-postgres
+shared_logs/
+
